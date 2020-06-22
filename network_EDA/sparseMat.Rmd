@@ -1,0 +1,79 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+data(TCnetworks)
+TCcnt <- TCnetworks$TCcnt 
+TCcoll <- TCnetworks$TCcoll
+TCdiss <- TCnetworks$TCdiss 
+TCdist <- TCnetworks$TCdist 
+summary(TCdiss,print.adj=FALSE)
+```
+
+```{r}
+# Load packages
+library(data.table)
+library(igraph)
+
+# Scientific collaboration dataset
+# Descriptives as reported on https://toreopsahl.com/datasets/#newman2001 
+# mode 1 elements: 16726    
+# mode 2 elements: 22016    
+# two mode ties: 58595
+# one mode ties: 47594  
+d <- fread("http://opsahl.co.uk/tnet/datasets/Newman-Cond_mat_95-99-two_mode.txt", 
+           stringsAsFactors=TRUE, colClasses = "factor", header=FALSE)
+
+# Transform data to a sparse matrix
+A <- sparseMatrix(
+              # nrow=length(unique(d[, V1])),
+              # ncol=length(unique(d[, V2])),
+              i = as.numeric(d[, V1]),
+              j = as.numeric(d[, V2]),
+              x = rep(1, length(as.numeric(d[, V1]))) )
+row.names(A) <- levels(d[, V1])
+colnames(A) <- levels(d[, V2])
+
+#To do the projection you have acutally multiple possiblities, here are two:
+
+# Use base r
+Arow <- tcrossprod(A)
+# Alternatively, if you want to project on the other mode:
+Acol <- tcrossprod(t(A))# Load packages
+library(data.table)
+library(igraph)
+
+# Scientific collaboration dataset
+# Descriptives as reported on https://toreopsahl.com/datasets/#newman2001 
+# mode 1 elements: 16726    
+# mode 2 elements: 22016    
+# two mode ties: 58595
+# one mode ties: 47594  
+source("getNet.R")
+source("plotNet.R")
+require(tidyverse)
+require(igraph)
+
+
+d = select(data, Provider,BeneID) %>% 
+  mutate(Provider = gsub("[a-zA-Z ]", "", Provider),
+         BeneID = gsub("[a-zA-Z ]", "", BeneID)) %>% data.table()
+
+A <- sparseMatrix(
+              # nrow=length(unique(d[, V1])),
+              # ncol=length(unique(d[, V2])),
+              i = as.numeric(unlist(d[, "Provider"])),
+              j = as.numeric(unlist(d[, "BeneID"])))
+              #x = rep(1, length(as.numeric(d[, V1]))) )
+row.names(A) <- levels(d[, Provider])
+colnames(A) <- levels(d[, BeneID])
+
+# Use base r
+Arow <- tcrossprod(A)
+# Alternatively, if you want to project on the other mode:
+Acol <- tcrossprod(t(A))# Load packages
+```
+

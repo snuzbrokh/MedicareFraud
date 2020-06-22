@@ -1,0 +1,505 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+nodes <- read.csv("./data/sunbelt2019/Dataset1-Media-Example-NODES.csv", header=T, as.is=T)
+links <- read.csv("./data/sunbelt2019/Dataset1-Media-Example-EDGES.csv", header=T, as.is=T)
+
+head(nodes)
+head(links)
+```
+
+```{r}
+library(igraph)
+
+net = graph_from_data_frame(d=edges, vertices=nodes, directed=T)
+net
+plot(net)
+```
+```{r}
+E(net)
+V(net)
+E(net)$type
+#V(net)[media=='BBC']
+```
+```{r}
+as_adjacency_matrix(net, attr="weight")
+```
+```{r}
+net <- simplify(net, remove.multiple = F, remove.loops = T) 
+plot(net, edge.arrow.size=.4,vertex.label=NA)
+
+```
+```{r}
+nodes2 <- read.csv("./data/sunbelt2019/Dataset2-Media-User-Example-NODES.csv", header=T, as.is=T)
+links2 <- read.csv("./data/sunbelt2019/Dataset2-Media-User-Example-EDGES.csv", header=T, row.names=1)
+head(nodes2)
+head(links2)
+```
+
+```{r}
+links2 <- as.matrix(links2)
+dim(links2)
+dim(nodes2)
+links2
+```
+```{r}
+net2 <- graph_from_incidence_matrix(links2)
+table(V(net2)$type)
+```
+```{r}
+plot(routes_network, 
+     edge.arrow.size=.2, 
+     edge.color="orange",
+     vertex.color="orange", 
+     vertex.frame.color="#ffffff",
+     #vertex.label=V(net)$media, 
+     vertex.label.color="black")
+```
+
+```{r}
+colors = c("gray50","tomato")
+E(net)$color = colors[ifelse(E(net)$Connection=='OtherPhysician',2,1)]
+
+deg = degree(net, mode="all")
+V(net)$size = deg*2
+
+V(net)$label = NA
+
+E(net)$width = E(net)$weight/10
+
+E(net)$arrow.size = 0.4
+E(net)$edge.color = "gray80"
+
+graph_attr(net, "layout") = layout_with_lgl
+plot(net) 
+legend(x=-1.5, y=-1.1, c("Operating","Other"), pch=21,
+       col="#777777", pt.bg=colrs, pt.cex=2, cex=.8, bty="n", ncol=1)
+plot(net, vertex.shape="none", vertex.label=V(net)$media, 
+     vertex.label.font=2, vertex.label.color="gray40",
+     vertex.label.cex=.7, edge.color="gray85")
+edge.start <- ends(net, es=E(net), names=F)[,1]
+edge.col <- V(net)$color[edge.start]
+
+plot(net, edge.color=edge.col, edge.curved=.1)  
+```
+
+```{r}
+#net.bg <- sample_pa(100) 
+V(net)$size <- 8
+V(net)$frame.color <- "white"
+V(net)$color <- "orange"
+V(net)$label <- "" 
+E(net)$arrow.mode <- 0
+
+# Default Barabasi Layout
+plot(net)
+
+# Random Layout
+plot(net, layout=layout_randomly)
+
+# Circle Layout
+l <- layout_in_circle(net)
+plot(net, layout=l)
+
+# Fruchterman-Reingold
+l <- layout_with_fr(net)
+plot(net, layout=l)
+
+# Kamada Kawai
+l <- layout_with_kk(net)
+plot(net.bg, layout=l)
+
+# Graphopt, good for large networks
+l <- layout_with_graphopt(net)
+plot(net, layout=l)
+```
+
+
+```{r}
+l <- layout_with_fr(net, niter=200)
+plot(net, layout=l)
+```
+
+
+```{r}
+l <- layout_with_fr(net.bg)
+l <- norm_coords(l, ymin=-1, ymax=1, xmin=-1, xmax=1)
+
+par(mfrow=c(2,2), mar=c(0,0,0,0))
+plot(net.bg, rescale=F, layout=l*0.4)
+plot(net.bg, rescale=F, layout=l*0.6)
+plot(net.bg, rescale=F, layout=l*0.8)
+plot(net.bg, rescale=F, layout=l*1.0)
+```
+```{r}
+l <- layout_on_grid(net)
+plot(net, layout=l)
+```
+```{r}
+layouts <- grep("^layout_", ls("package:igraph"), value=TRUE)[-1] 
+# Remove layouts that do not apply to our graph.
+layouts <- layouts[!grepl("bipartite|merge|norm|sugiyama|tree", layouts)]
+
+par(mfrow=c(3,3), mar=c(1,1,1,1))
+for (layout in layouts) {
+  print(layout)
+  l <- do.call(layout, list(net)) 
+  plot(net, edge.arrow.mode=0, layout=l, main=layout) }
+```
+
+```{r}
+hist(links$weight)
+mean(links$weight)
+sd(links$weight)
+```
+
+```{r}
+cut.off <- mean(edges$weight)
+net.sp <- delete_edges(net, E(net)[weight<cut.off])
+plot(net.sp, layout=layout_with_kk) 
+```
+```{r}
+par(mfrow=c(1,2))
+
+# Community detection (by optimizing modularity over partitions):
+clp <- cluster_optimal(net)
+class(clp)
+
+# Community detection returns an object of class "communities" 
+# which igraph knows how to plot: 
+plot(clp, net)
+ 
+# We can also plot the communities without relying on their built-in plot:
+V(net)$community <- clp$membership
+colrs <- adjustcolor( c("gray50", "tomato", "gold", "yellowgreen"), alpha=.6)
+plot(net, vertex.color=colrs[V(net)$community])
+```
+```{r}
+dist.from.Benavidez <- distances(net, v=V(net)[name=="18"], 
+                           to=V(net), weights=NA)
+dist.from.Benavidez
+# Set colors to plot the distances:
+oranges <- colorRampPalette(c("dark red", "gold"))
+col <- oranges(min(dist.from.Benavidez)+1)
+col <- col[dist.from.Benavidez+1]
+
+plot(net, vertex.color=col, vertex.label=dist.from.Benavidez, edge.arrow.size=.6, 
+     vertex.label.color="white")
+
+
+news.path <- shortest_paths(net, 
+                            from = V(net)[media=="MSNBC"], 
+                             to  = V(net)[media=="New York Post"],
+                             output = "both") # both path nodes and edges
+
+# Generate edge color variable to plot the path:
+ecol <- rep("gray80", ecount(net))
+ecol[unlist(news.path$epath)] <- "orange"
+# Generate edge width variable to plot the path:
+ew <- rep(2, ecount(net))
+ew[unlist(news.path$epath)] <- 4
+# Generate node color variable to plot the path:
+vcol <- rep("gray40", vcount(net))
+vcol[unlist(news.path$vpath)] <- "gold"
+
+plot(net, vertex.color=vcol, edge.color=ecol, 
+     edge.width=ew, edge.arrow.mode=0)
+```
+
+```{r}
+neigh.nodes <- neighbors(net, V(net)[media=="New York Post"], mode="out")
+
+# Set colors to plot the neighbors:
+vcol[neigh.nodes] <- "#ff9d00"
+plot(net, vertex.color=vcol)
+```
+```{r}
+par(mfrow=c(1,2))
+plot(net, mark.groups=c(1,4,5,8), mark.col="#C5E5E7", mark.border=NA)
+
+# Mark multiple groups:
+plot(net, mark.groups=list(c(1,4,5,8), c(15:17)), 
+          mark.col=c("#C5E5E7","#ECD89A"), mark.border=NA)
+```
+
+```{r}
+tkid <- tkplot(net) #tkid is the id of the tkplot that will open
+l <- tkplot.getcoords(tkid) # grab the coordinates from tkplot
+plot(net, layout=l)
+```
+
+```{r}
+head(nodes2)
+head(links2)
+
+net2
+plot(net2, vertex.label=NA)
+
+# Media outlets are blue squares, audience nodes are orange circles:
+V(net2)$color <- c("steel blue", "orange")[V(net2)$type+1]
+V(net2)$shape <- c("square", "circle")[V(net2)$type+1]
+
+# Media outlets will have name labels, audience members will not:
+V(net2)$label <- ""
+V(net2)$label[V(net2)$type==F] <- nodes2$media[V(net2)$type==F] 
+V(net2)$label.cex=.6
+V(net2)$label.font=2
+
+plot(net2, vertex.label.color="white", vertex.size=(2-V(net2)$type)*8) 
+
+
+```
+```{r}
+E(net)$width <- 1.5
+plot(net, edge.color=c("dark red", "slategrey")[(E(net)$type=="hyperlink")+1],
+      vertex.color="gray40", layout=layout_in_circle, edge.curved=.3)
+
+net.m <- net - E(net)[E(net)$type=="hyperlink"] # another way to delete edges:
+net.h <- net - E(net)[E(net)$type=="mention"]   # using the minus operator
+
+# Plot the two links separately:
+par(mfrow=c(1,2))
+plot(net.h, vertex.color="orange", layout=layout_with_fr, main="Tie: Hyperlink")
+plot(net.m, vertex.color="lightsteelblue2", layout=layout_with_fr, main="Tie: Mention")
+
+# Make sure the nodes stay in place in both plots:
+l <- layout_with_fr(net)
+plot(net.h, vertex.color="orange", layout=l, main="Tie: Hyperlink")
+plot(net.m, vertex.color="lightsteelblue2", layout=l, main="Tie: Mention")
+```
+
+```{r}
+multigtr <- graph( edges=c(1,2, 1,2, 1,2), n=2 )
+l <- layout_with_kk(multigtr)
+
+# Let's just plot the graph:
+plot(multigtr, vertex.color="lightsteelblue", vertex.frame.color="white",
+     vertex.size=40, vertex.shape="circle", vertex.label=NA,
+     edge.color=c("gold", "tomato", "yellowgreen"), edge.width=5,
+     edge.arrow.size=3, edge.curved=0.1, layout=l)
+
+plot(multigtr, vertex.color="lightsteelblue", vertex.frame.color="white", 
+     vertex.size=40, vertex.shape="circle", vertex.label=NA,
+     edge.color=c("gold", "tomato", "yellowgreen"), edge.width=5,
+     edge.arrow.size=3, edge.curved=curve_multiple(multigtr), layout=l)
+```
+```{r}
+detach('package:igraph')
+```
+```{r}
+library('network')
+
+net3 <- network(edges,  vertex.attr=nodes, matrix.type="edgelist", 
+                loops=F, multiple=F, ignore.eval = F)
+```
+
+```{r}
+net3 %e% "col" <- c("gray70", "tomato")[net3 %e% "Connection"]
+plot(net3, edge.cex=(net3 %e% "weight")/7)
+```
+```{r}
+l <- plot(net3, vertex.cex=(net3 %v% "audience.size")/10, vertex.col="col")
+plot(net3, vertex.cex=(net3 %v% "audience.size")/7, vertex.col="col", coord=l)
+```
+```{r}
+detach('package:network')
+
+
+
+```
+```{r}
+library(ggraph)
+library(igraph)
+
+ggraph(net3) +
+  geom_edge_fan(color="gray50", width=0.8, alpha=0.5) + 
+  geom_node_point() +
+  theme_bw() # add nodes to the plot
+```
+```{r}
+ggraph(net3, layout="lgl") +
+  geom_edge_fan(color="gray50", width=0.8, alpha=0.5) + 
+  geom_node_point(size=8) +
+  theme_void()
+```
+```{r}
+ggraph(net3) +
+  geom_edge_link(aes(color = Connection, size = weight)) +           # colors by edge type 
+  geom_node_point() +  # size by audience size  
+  theme_void()
+```
+```{r}
+ggraph(net3) +
+  geom_edge_arc(color="gray", curvature=0.3, aes(size=weight)) +            
+  geom_node_point(color="orange") +     
+  geom_node_text(aes(label = label), size=2, color="black", repel=T) +
+  theme_void()
+```
+
+```{r}
+detach("package:ggraph") 
+```
+
+```{r}
+netm <- get.adjacency(net3, attr="weight", sparse=F)
+colnames(netm) <- V(net)$label
+rownames(netm) <- V(net)$label
+
+palf <- colorRampPalette(c("gold", "dark orange")) 
+heatmap(netm[,17:1], Rowv = NA, Colv = NA, col = palf(100), 
+        scale="none", margins=c(10,10) )
+```
+```{r}
+library('animation') 
+library('igraph')
+
+ani.options("convert") # Check that the package knows where to find ImageMagick
+# If it doesn't know where to find it, give it the correct path for your system.
+ani.options(convert="C:/Program Files/ImageMagick-6.8.8-Q16/convert.exe")
+```
+```{r}
+install.packages('ndtv', dependencies=T)
+```
+
+```{r}
+library(ndtv)
+```
+```{r}
+par(mar=c(0,0,0,0))
+
+render.d3movie(net3, usearrows = F, displaylabels = F, bg="#111111", 
+       vertex.border="#ffffff", 
+       #vertex.col =  net3 %v% "col",
+       #vertex.cex = (net3 %v% "audience.size")/8, 
+       edge.lwd = (net3 %e% "weight")/3, 
+       edge.col = '#55555599',
+       vertex.tooltip = paste("<b>Name:</b>", (net3 %v% 'label')), 
+                              #"<br>",
+                              #"<b>Type:</b>", (net3 %v% 'type.label')),
+       edge.tooltip = paste("<b>Connection to Source:</b>", (net3 %e% 'Connection'), "<br>", 
+                            "<b>Number of Claims Filed:</b>", (net3 %e% "weight" ) ),
+       launchBrowser=F, filename="Doc-Network.html")
+```
+```{r}
+vs <- data.frame(onset=0, terminus=50, vertex.id=1:17)
+es <- data.frame(head=as.matrix(net3, matrix.type="edgelist")[,1],
+                 tail=as.matrix(net3, matrix.type="edgelist")[,2])
+
+net3.dyn <- networkDynamic(base.net=net3, edge.spells=es, vertex.spells=vs)
+```
+
+```{r}
+plot(net3.dyn, vertex.cex=(net3 %v% "audience.size")/7, vertex.col="col")
+
+```
+```{r}
+filmstrip(net3.dyn, displaylabels=F, mfrow=c(1, 5),
+          slice.par=list(start=0, end=49, interval=10, 
+                         aggregate.dur=10, rule='any'))
+```
+```{r}
+compute.animation(net3.dyn, animation.mode = "kamadakawai",
+                  slice.par=list(start=0, end=50, interval=1, 
+                         aggregate.dur=1, rule='any'))
+
+render.d3movie(net3.dyn, usearrows = F, 
+       displaylabels = F, label=net3 %v% "media",
+       bg="#ffffff", vertex.border="#333333",
+       vertex.cex = degree(net3)/2,  
+       vertex.col = net3.dyn %v% "col",
+       edge.lwd = (net3.dyn %e% "weight")/3, 
+       edge.col = '#55555599',
+       vertex.tooltip = paste("<b>Name:</b>", (net3.dyn %v% "media") , "<br>",
+                              "<b>Type:</b>", (net3.dyn %v% "type.label")),
+       edge.tooltip = paste("<b>Edge type:</b>", (net3.dyn %e% "type"), "<br>", 
+                            "<b>Edge weight:</b>", (net3.dyn %e% "weight" ) ),
+       launchBrowser=T,
+       render.par=list(tween.frames = 30, show.time = F),
+       plot.par=list(mar=c(0,0,0,0)), filename = paste0(getwd(), "/movie.html"))
+```
+
+```{r}
+render.d3movie(net3.dyn, usearrows = F, 
+       displaylabels = F, label=net3 %v% "media",
+       bg="#000000", vertex.border="#dddddd",
+       vertex.cex = function(slice){ degree(slice)/2.5 },  
+       vertex.col = net3.dyn %v% "col",
+       edge.lwd = (net3.dyn %e% "weight")/3, 
+       edge.col = '#55555599',
+       vertex.tooltip = paste("<b>Name:</b>", (net3.dyn %v% "media") , "<br>",
+                              "<b>Type:</b>", (net3.dyn %v% "type.label")),
+       edge.tooltip = paste("<b>Edge type:</b>", (net3.dyn %e% "type"), "<br>", 
+                            "<b>Edge weight:</b>", (net3.dyn %e% "weight" ) ),
+       filename = paste0(getwd(), "/movie_attr.html"),
+       render.par=list(tween.frames = 15, show.time = F),
+       slice.par=list(start=0, end=50, interval=4, aggregate.dur=4, rule='any'))
+```
+
+```{r}
+airports <- read.csv("./data/sunbelt2019/Dataset3-Airlines-NODES.csv", header=TRUE) 
+flights <- read.csv("./data/sunbelt2019/Dataset3-Airlines-EDGES.csv", header=TRUE, as.is=TRUE)
+
+head(flights)
+```
+
+```{r}
+tab <- table(flights$Source)
+big.id <- names(tab)[tab>7]
+airports <- airports[airports$ID %in% big.id,]
+flights  <- flights[flights$Source %in% big.id & 
+                    flights$Target %in% big.id, ]
+```
+```{r}
+
+```
+```{r}
+col.1 <- adjustcolor("orange red", alpha=0.4)
+col.2 <- adjustcolor("orange", alpha=0.4)
+edge.pal <- colorRampPalette(c(col.1, col.2), alpha = TRUE)
+edge.col <- edge.pal(100)
+```
+
+```{r}
+
+# Plot a map of the united states:
+map("state", col="grey20", fill=TRUE, bg="black", lwd=0.1)
+
+# Add a point on the map for each airport:
+points(x=airports$longitude, y=airports$latitude, pch=19, 
+       cex=airports$Visits/80, col="orange")
+
+col.1 <- adjustcolor("orange red", alpha=0.4)
+col.2 <- adjustcolor("orange", alpha=0.4)
+edge.pal <- colorRampPalette(c(col.1, col.2), alpha = TRUE)
+edge.col <- edge.pal(100)
+
+for(i in 1:nrow(flights))
+  {
+    node1 <- airports[airports$ID == flights[i,]$Source,]
+    node2 <- airports[airports$ID == flights[i,]$Target,]
+    
+    arc <- gcIntermediate( c(node1[1,]$longitude, node1[1,]$latitude), 
+                           c(node2[1,]$longitude, node2[1,]$latitude), 
+                           n=1000, addStartEnd=TRUE )
+    edge.ind <- round(100*flights[i,]$Freq / max(flights$Freq))
+    
+    lines(arc, col=edge.col[edge.ind], lwd=edge.ind/30)
+}
+```
+```{r}
+netmat2 <- rbind(c(1,2), c(1,3), c(2,3), c(2,4), c(3,2), c(5,3))
+net2 <- network(netmat2,matrix.type="edgelist") 
+network.vertex.names(net2) <- c("A","B","C","D","E") 
+summary(net2)
+
+plot(net2)
+```
+

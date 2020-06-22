@@ -1,0 +1,16 @@
+---
+title: "Feature Selection"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+data = read_csv('../data/provData/x_train.csv');
+```
+
+```{r}
+model.saturated = glm(PotentialFraud ~ ., family='binomial', data= data)
+
+```
+
