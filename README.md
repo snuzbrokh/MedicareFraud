@@ -5,8 +5,10 @@ This was my capstone project at the NYC Data Science Academy.
 
 Dataset can be found [here](https://www.kaggle.com/rohitrox/healthcare-provider-fraud-detection-analysis).
 
-[Link to the blog post](https://nycdatascience.com/blog/student-works/predicting-fraudulent-health-insurance-claims/)
-[Link to personal portfolio](https://www.databough.com/art)
+[Blog Post](https://nycdatascience.com/blog/student-works/predicting-fraudulent-health-insurance-claims/)
+
+[Personal portfolio](https://www.databough.com/art)
+
 
 Largest Duplication Network found in the Claim Data - Corresponding to NYC metro area. 
 ![pic](https://github.com/snuzbrokh/MedicareFraud/blob/master/visualizations/networks/outpatientdup_largest.png)
