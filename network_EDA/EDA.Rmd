@@ -662,6 +662,7 @@ edges = claimTrack %>%
   #filter(State_S %in% state, State_R %in% c('New York')) %>% 
   select(Doctor_S,Doctor_R) %>% data.frame()
 
+
 dnet = edges %>% graph.data.frame(directed = TRUE)
 #dnet = simplify(dnet)
 #V(dnet)$type <- ifelse(V(dnet)$name %in% edges[,1],'Sender','Receiver')
@@ -680,7 +681,7 @@ V(dnet)$size <- sqrt(strength(dnet))
 ```
 
 ```{r}
-dnet %>% ggraph(.,layout = 'stress')+
+g = dnet %>% ggraph(.,layout = 'stress')+
     geom_edge_fan0(arrow = arrow(angle = 30, length = unit(0.03, "inches"),
                               ends = "last", type = "closed"),alpha=0.5, edge_color='blue')+
     geom_node_point(
@@ -695,7 +696,7 @@ dnet %>% ggraph(.,layout = 'stress')+
     scale_size_continuous(range = c(2,4), guide=FALSE)+
     theme_graph()
 
-ggsave(filename=paste0('../visualizations/networks/doctordup.png'),plot=last_plot())
+ggsave(filename='../doctordup.png',plot=g)
 
 ```
 

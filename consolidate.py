@@ -8,7 +8,10 @@ try:
 except:
     pass
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> bc79f1fedb2cf04f45ff21227daf7de1af94706b
 state_dict = {
  1: 'Alabama',
  2: 'Alaska',
